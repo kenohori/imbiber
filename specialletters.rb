@@ -1,6 +1,9 @@
 class SpecialLetters
 	
 	@@letters = {
+		"---" => "—",
+		"--" => "–",
+
 		"\\\"a" => "ä",
 		"\\\"e" => "ë",
 		"\\\"i" => "ï",
@@ -21,9 +24,12 @@ class SpecialLetters
 	}
 
 	def convert(letter)
-		if @@letters.has_key?(letter)
+		if @@letters.has_key?(letter) then
 			return @@letters[letter]
+		elsif letter.length == 2 and letter[0] == "\\" then
+			return letter[1]
 		else
+			puts "Warning: not supported letter " + letter
 			return letter
 		end
 	end
