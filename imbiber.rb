@@ -76,10 +76,15 @@ class NameParser < Parslet::Parser
 end
 
 class NameTransformer < Parslet::Transform
-	sl = SpecialLetters.new
+
+	def initialize(nameformat = "firstlast")
+		super()
+		@@nameformat = nameformat
+		@@sl = SpecialLetters.new
+	end
 
 	rule(:letter => simple(:l)) { l.to_s }
-	rule(:specialletter => simple(:l)) { sl.convert(l.to_s) }
+	rule(:specialletter => simple(:l)) { @@sl.convert(l.to_s) }
 	rule(:space => simple(:s)) { " " }
 	rule(:comma => simple(:c)) { "," }
 	rule(:word => sequence(:w)) {
@@ -97,12 +102,16 @@ class NameTransformer < Parslet::Transform
 				commas += 1
 			end
 		end
-		
 		case commas
 		when 0
 			first = s[0..-2].join(" ")
 			last = s[-1]
-			{:first => first, :last => last}
+			case @@nameformat
+			when "firstlast"
+				first + " " + last
+			when "lastfirst"
+				last + ", " + first
+			end
 		when 1
 			first = []
 			last = []
@@ -116,7 +125,12 @@ class NameTransformer < Parslet::Transform
 					first.push(token)
 				end
 			end
-			{:first => first.join(" "), :last => last.join(" ")}
+			case @@nameformat
+			when "firstlast"
+				first.join(" ") + " " + last.join(" ")
+			when "lastfirst"
+				last.join(" ") + ", " + first.join(" ")
+			end
 		end
 	}
 end
@@ -142,13 +156,12 @@ class TextTransformer < Parslet::Transform
 
 	def initialize(casetouse = "unchanged")
 		super()
-		@casetouse = casetouse
+		@@casetouse = casetouse
+		@@sl = SpecialLetters.new
 	end
 
-	sl = SpecialLetters.new
-
 	rule(:letter => simple(:l)) { 
-		case @casetouse
+		case @@casetouse
 		when "sentence"
 			l.to_s.downcase
 		else
@@ -158,19 +171,19 @@ class TextTransformer < Parslet::Transform
 	}
 
 	rule(:specialletter => simple(:l)) {
-		case @casetouse
+		case @@casetouse
 		when "sentence"
-			sl.convert(l.to_s.downcase)
+			@@sl.convert(l.to_s.downcase)
 		else
-			sl.convert(l.to_s)
+			@@sl.convert(l.to_s)
 		end
 	}
 	rule(:letterpreservecase => simple(:l)) { l.to_s }
-	rule(:specialletterpreservecase => simple(:l)) { sl.convert(l.to_s) }
+	rule(:specialletterpreservecase => simple(:l)) { @@sl.convert(l.to_s) }
 
 	rule(:word => sequence(:w)) { w.join("") }
 	rule(:text => sequence(:t)) {
-		case @casetouse
+		case @@casetouse
 		when "sentence"
 			text = t.join(" ")
 			text = text[0].upcase + text[1..-1]
@@ -220,6 +233,13 @@ end
 class Imbiber
 	def initialize(options = Hash.new)
 		@entries = {}
+		@options = {
+			:lang => "en",
+			:nameformat => "firstlast"
+		}
+		options.each do |key, value|
+			@options[key] = value
+		end
 	end
 
 	def to_s
@@ -228,6 +248,10 @@ class Imbiber
 
 	def entries
 		@entries
+	end
+
+	def listtoformattedstring(list)
+
 	end
 
 	def read(path)
@@ -252,18 +276,18 @@ class Imbiber
 					authorstree = AuthorsParser.new.parse(field[:field][1][:value].to_s)
 					@entries[key][:author] = []
 					authorstree.each do |author|
-						nametree = NameTransformer.new.apply(NameParser.new.parse(author[:author].to_s))
+						nametree = NameTransformer.new(@options[:nameformat]).apply(NameParser.new.parse(author[:author].to_s))
 						@entries[key][:author].push(nametree)
 					end
 				when "editor"
 					editorstree = AuthorsParser.new.parse(field[:field][1][:value].to_s)
 					@entries[key][:editor] = []
 					editorstree.each do |editor|
-						nametree = NameTransformer.new.apply(NameParser.new.parse(editor[:author].to_s))
+						nametree = NameTransformer.new(@options[:nameformat]).apply(NameParser.new.parse(editor[:author].to_s))
 						@entries[key][:editor].push(nametree)
 					end
 				when "title"
-					titletree = TextTransformer.new("sentence").apply(TextParser.new.parse(field[:field][1][:value].to_s))
+					titletree = TextTransformer.new(:sentence).apply(TextParser.new.parse(field[:field][1][:value].to_s))
 					@entries[key][:title] = titletree.to_s
 				when "month"
 					monthtree = MonthTransformer.new.apply(MonthParser.new.parse_with_debug(field[:field][1][:value].to_s))
@@ -288,11 +312,14 @@ class Imbiber
 		case @entries[key][:type]
 		when "article"
 			outwhat = @entries[key][:title]
+			outwho = @entries[key][:author]
 		end
 
 		if outwhat.length > 0 then
 			outwhat = "<strong>" + outwhat + "</strong>. "
 		end
+		
+		pp outwho
 	end
 end
 
@@ -300,7 +327,7 @@ i = Imbiber.new
 i.read("/Users/ken/Versioned/websites/work/publications.bib")
 i.read("/Users/ken/Versioned/websites/work/others.bib")
 # pp i.entries
-puts i.html_of(:"15ijgis_extrusion")
+i.html_of(:"15ijgis_extrusion")
 
 # text = File.read("/Users/ken/Versioned/websites/work/publications.bib")
 # entries = DocumentParser.new.parse_with_debug(text)
