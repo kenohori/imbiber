@@ -49,8 +49,10 @@ class AuthorsParser < Parslet::Parser
 
 	rule(:whitespace) { match['\s\n\r'].repeat(1) }
 	rule(:whitespace?) { whitespace.maybe }
+	rule(:bracketedtext) { str('{') >> (match['^{}'] | bracketedtext).repeat >> str('}') }
 
-	rule(:authorslist) { whitespace | str('and') | author }
+	rule(:authorslist) { (whitespace | str('and ') | author.as(:author)).repeat }
+	rule(:author) { (str(' and ').absent? >> (match['^{}'] | bracketedtext)).repeat(1) }
 end
 
 class Imbiber
@@ -74,10 +76,12 @@ class Imbiber
 			@entries[entrybranch[:entry][:key]] = {}
 			@entries[entrybranch[:entry][:key]][:type] = entrybranch[:entry][:type]
 			entrybranch[:entry][:fields].each do |field|
-				puts field[:field][0][:name].to_s.downcase
+				# puts field[:field][0][:name].to_s.downcase
 				case field[:field][0][:name].to_s.downcase
 				when "author"
+					puts field[:field][1][:value].to_s
 					authorstree = AuthorsParser.new.parse_with_debug(field[:field][1][:value].to_s)
+					puts authorstree
 				end
 				# puts field[:field][1][:value].to_s
 				# @entries[entrybranch[:entry][:key]][field[:field][0][:name].to_s.downcase] =  
