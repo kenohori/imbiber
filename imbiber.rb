@@ -5,6 +5,7 @@ require 'parslet'
 require 'parslet/convenience'
 
 require_relative 'specialletters'
+require_relative 'monthutils'
 
 class DocumentParser < Parslet::Parser
 
@@ -137,44 +138,92 @@ class TextParser < Parslet::Parser
 
 end
 
-class SentenceCaseTransformer < Parslet::Transform
+class TextTransformer < Parslet::Transform
+
+	def initialize(casetouse = "unchanged")
+		super()
+		@casetouse = casetouse
+	end
+
 	sl = SpecialLetters.new
 
-	rule(:letter => simple(:l)) { l.to_s.downcase }
-	rule(:specialletter => simple(:l)) { sl.convert(l.to_s.downcase) }
+	rule(:letter => simple(:l)) { 
+		case @casetouse
+		when "sentence"
+			l.to_s.downcase
+		else
+			l.to_s
+		end
+
+	}
+
+	rule(:specialletter => simple(:l)) {
+		case @casetouse
+		when "sentence"
+			sl.convert(l.to_s.downcase)
+		else
+			sl.convert(l.to_s)
+		end
+	}
 	rule(:letterpreservecase => simple(:l)) { l.to_s }
 	rule(:specialletterpreservecase => simple(:l)) { sl.convert(l.to_s) }
 
 	rule(:word => sequence(:w)) { w.join("") }
-
 	rule(:text => sequence(:t)) {
-		text = t.join(" ")
-		text = text[0].upcase + text[1..-1]
-		text
+		case @casetouse
+		when "sentence"
+			text = t.join(" ")
+			text = text[0].upcase + text[1..-1]
+			text
+		else
+			t.join(" ")
+		end
 	}
 
 end
 
-class TextTransformer < Parslet::Transform
-	sl = SpecialLetters.new
+class MonthParser < Parslet::Parser
 
-	rule(:letter => simple(:l)) { l.to_s }
-	rule(:specialletter => simple(:l)) { sl.convert(l.to_s) }
-	rule(:letterpreservecase => simple(:l)) { l.to_s }
-	rule(:specialletterpreservecase => simple(:l)) { sl.convert(l.to_s) }
+	def stri(str)
+		key_chars = str.split(//)
+	    key_chars.collect! { |char| match["#{char.upcase}#{char.downcase}"] }.
+		reduce(:>>)
+	end
 
-	rule(:word => sequence(:w)) { w.join("") }
-	rule(:text => sequence(:t)) { t.join(" ") }
+	root(:number)
 
+	rule(:number) { digit.repeat(1).as(:number) | monthname }
+	rule(:digit) { match['0-9'] }
+	rule(:monthname) { abbreviatedmonthname.as(:abbreviatedmonthname) | fullmonthname.as(:fullmonthname) }
+	rule(:abbreviatedmonthname) { stri('jan') | stri('feb') | stri('mar') | stri('apr') | stri('may') | stri('jun') | stri('jul') | stri('aug') | stri('sep') | stri('oct') | stri('nov') | stri('dec') }
+	rule(:fullmonthname) { stri('january') | 
+	                       stri('february') |
+	                       stri('march') |
+	                       stri('april') |
+	                       stri('may') |
+	                       stri('june') |
+	                       stri('july') |
+	                       stri('august') |
+	                       stri('september') |
+	                       stri('october') |
+	                       stri('november') |
+	                       stri('december') }
+end
+
+class MonthTransformer < Parslet::Transform
+	mu = MonthUtils.new
+
+	rule(:abbreviatedmonthname => simple(:amn)) { amn.to_s }
+	rule(:number => simple(:n)) { mu.numbertoabbreviatedmonth(n) }
 end
 
 class Imbiber
-	def initialize
+	def initialize(options = Hash.new)
 		@entries = {}
 	end
 
 	def to_s
-		return @entries.to_s
+		@entries.to_s
 	end
 
 	def entries
@@ -210,26 +259,48 @@ class Imbiber
 					editorstree = AuthorsParser.new.parse(field[:field][1][:value].to_s)
 					@entries[key][:editor] = []
 					editorstree.each do |editor|
-						nametree = NameTransformer.new.apply(NameParser.new.parse_with_debug(editor[:author].to_s))
+						nametree = NameTransformer.new.apply(NameParser.new.parse(editor[:author].to_s))
 						@entries[key][:editor].push(nametree)
 					end
 				when "title"
-					titletree = SentenceCaseTransformer.new.apply(TextParser.new.parse_with_debug(field[:field][1][:value].to_s))
+					titletree = TextTransformer.new("sentence").apply(TextParser.new.parse(field[:field][1][:value].to_s))
 					@entries[key][:title] = titletree.to_s
+				when "month"
+					monthtree = MonthTransformer.new.apply(MonthParser.new.parse_with_debug(field[:field][1][:value].to_s))
+					@entries[key][:month] = monthtree.to_s
 				else
-					texttree = TextTransformer.new.apply(TextParser.new.parse_with_debug(field[:field][1][:value].to_s))
+					texttree = TextTransformer.new("unchanged").apply(TextParser.new.parse(field[:field][1][:value].to_s))
 					@entries[key][field[:field][0][:name].to_s.downcase.to_sym] = texttree.to_s
 				end
-				# puts field[:field][1][:value].to_s
-				# @entries[entrybranch[:entry][:key]][field[:field][0][:name].to_s.downcase] =  
 			end
+		end
+	end
+
+	def html_of(key)
+		if !@entries.has_key?(key) then
+			return ""
+		end
+
+		outwhat = ""
+		outwho = ""
+		outwhere = ""
+
+		case @entries[key][:type]
+		when "article"
+			outwhat = @entries[key][:title]
+		end
+
+		if outwhat.length > 0 then
+			outwhat = "<strong>" + outwhat + "</strong>. "
 		end
 	end
 end
 
 i = Imbiber.new
 i.read("/Users/ken/Versioned/websites/work/publications.bib")
-pp i.entries
+i.read("/Users/ken/Versioned/websites/work/others.bib")
+# pp i.entries
+puts i.html_of(:"15ijgis_extrusion")
 
 # text = File.read("/Users/ken/Versioned/websites/work/publications.bib")
 # entries = DocumentParser.new.parse_with_debug(text)

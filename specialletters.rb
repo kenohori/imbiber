@@ -9,28 +9,43 @@ class SpecialLetters
 		"\\\"i" => "ï",
 		"\\\"o" => "ö",
 		"\\\"u" => "ü",
+		"\\\"A" => "Ä",
+		"\\\"E" => "Ë",
+		"\\\"I" => "Ï",
+		"\\\"O" => "Ö",
+		"\\\"U" => "Ü",
 
 		"\\\'a" => "á",
 		"\\\'e" => "é",
 		"\\\'i" => "í",
 		"\\\'o" => "ó",
 		"\\\'u" => "ú",
+		"\\\'A" => "Á",
+		"\\\'E" => "É",
+		"\\\'I" => "Í",
+		"\\\'O" => "Ó",
+		"\\\'U" => "Ú",
 
 		"\\\^a" => "â",
 		"\\\^e" => "ê",
 		"\\\^i" => "î",
 		"\\\^o" => "ô",
-		"\\\^u" => "û" 
+		"\\\^u" => "û",
+		"\\\^A" => "Â",
+		"\\\^E" => "Ê",
+		"\\\^I" => "Î",
+		"\\\^O" => "Ô",
+		"\\\^U" => "Û"
 	}
 
 	def convert(letter)
 		if @@letters.has_key?(letter) then
-			return @@letters[letter]
+			@@letters[letter]
 		elsif letter.length == 2 and letter[0] == "\\" then
-			return letter[1]
+			letter[1]
 		else
 			puts "Warning: not supported letter " + letter
-			return letter
+			letter
 		end
 	end
 
