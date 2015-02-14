@@ -6,6 +6,7 @@ require 'parslet/convenience'
 
 require_relative 'specialletters'
 require_relative 'monthutils'
+require_relative 'localisedtext'
 
 class DocumentParser < Parslet::Parser
 
@@ -32,8 +33,8 @@ class DocumentParser < Parslet::Parser
 	rule(:string) { str('@') >> stri('string') >> whitespace? >> (bracketedtext | parenthesisedtext) }
 	rule(:preamble) { str('@') >> stri('preamble') >> whitespace? >> (bracketedtext | parenthesisedtext) }
 
-	rule(:entry) { str('@') >> entrytype.as(:type) >> whitespace? >> entrycontents }
-	rule(:entrytype) { match['^\s\n\r{},='].repeat(1) }
+	rule(:entry) { str('@') >> entryclass.as(:class) >> whitespace? >> entrycontents }
+	rule(:entryclass) { match['^\s\n\r{},='].repeat(1) }
 	rule(:entrycontents) { str('{') >> whitespace? >> entrykey.as(:key) >> whitespace? >> str(',') >> whitespace? >> entryfields.as(:fields) >> str(',').maybe >> whitespace? >> str('}') }
 	rule(:entrykey) { match['^\s\n\r{},='].repeat(1) }
 	rule(:entryfields) { entryfield.as(:field) >> whitespace? >> (str(',') >> whitespace? >> entryfield.as(:field) >> whitespace?).repeat }
@@ -77,7 +78,7 @@ end
 
 class NameTransformer < Parslet::Transform
 
-	def initialize(nameformat = "firstlast")
+	def initialize(nameformat = :firstlast)
 		super()
 		@@nameformat = nameformat
 		@@sl = SpecialLetters.new
@@ -107,9 +108,9 @@ class NameTransformer < Parslet::Transform
 			first = s[0..-2].join(" ")
 			last = s[-1]
 			case @@nameformat
-			when "firstlast"
+			when :firstlast
 				first + " " + last
-			when "lastfirst"
+			when :lastfirst
 				last + ", " + first
 			end
 		when 1
@@ -126,9 +127,9 @@ class NameTransformer < Parslet::Transform
 				end
 			end
 			case @@nameformat
-			when "firstlast"
+			when :firstlast
 				first.join(" ") + " " + last.join(" ")
-			when "lastfirst"
+			when :lastfirst
 				last.join(" ") + ", " + first.join(" ")
 			end
 		end
@@ -154,7 +155,7 @@ end
 
 class TextTransformer < Parslet::Transform
 
-	def initialize(casetouse = "unchanged")
+	def initialize(casetouse = :unchanged)
 		super()
 		@@casetouse = casetouse
 		@@sl = SpecialLetters.new
@@ -162,9 +163,11 @@ class TextTransformer < Parslet::Transform
 
 	rule(:letter => simple(:l)) { 
 		case @@casetouse
-		when "sentence"
+		when :sentence
 			l.to_s.downcase
-		else
+		when :title
+			l.to_s.downcase
+		when :unchanged
 			l.to_s
 		end
 
@@ -172,23 +175,39 @@ class TextTransformer < Parslet::Transform
 
 	rule(:specialletter => simple(:l)) {
 		case @@casetouse
-		when "sentence"
+		when :sentence
 			@@sl.convert(l.to_s.downcase)
-		else
+		when :title
+			@@sl.convert(l.to_s.downcase)
+		when :unchanged
 			@@sl.convert(l.to_s)
 		end
 	}
+
 	rule(:letterpreservecase => simple(:l)) { l.to_s }
 	rule(:specialletterpreservecase => simple(:l)) { @@sl.convert(l.to_s) }
 
-	rule(:word => sequence(:w)) { w.join("") }
+	rule(:word => sequence(:w)) {
+		case @@casetouse
+		when :sentence
+			w.join("")
+		when :title
+			word = w.join("")
+			word = word[0].upcase + word[1..-1]
+		when :unchanged
+			w.join("")
+		end
+	}
+
 	rule(:text => sequence(:t)) {
 		case @@casetouse
-		when "sentence"
+		when :sentence
 			text = t.join(" ")
 			text = text[0].upcase + text[1..-1]
 			text
-		else
+		when :title
+			t.join(" ")
+		when :unchanged
 			t.join(" ")
 		end
 	}
@@ -227,19 +246,22 @@ class MonthTransformer < Parslet::Transform
 	mu = MonthUtils.new
 
 	rule(:abbreviatedmonthname => simple(:amn)) { amn.to_s }
-	rule(:number => simple(:n)) { mu.numbertoabbreviatedmonth(n) }
+	rule(:number => simple(:n)) { mu.number_to_abbreviated_month(n) }
 end
 
 class Imbiber
 	def initialize(options = Hash.new)
 		@entries = {}
 		@options = {
-			:lang => "en",
-			:nameformat => "firstlast"
+			:lang => :en,
+			:nameformat => :firstlast,
+			:titlecase => :sentence
 		}
 		options.each do |key, value|
 			@options[key] = value
 		end
+
+		@lt = LocalisedText.new(@options[:lang])
 	end
 
 	def to_s
@@ -250,8 +272,17 @@ class Imbiber
 		@entries
 	end
 
-	def listtoformattedstring(list)
-
+	def list_to_string(l)
+		case l.length
+		when 0
+			return ""
+		when 1
+			return l[0]
+		when 2
+			return l[0] + ' ' + @lt.localise(:and) + ' ' + l[1]
+		else
+			return l[0..-2].join(', ') + ' ' + @lt.localise(:and) + ' ' + l[-1]
+		end
 	end
 
 	def read(path)
@@ -267,7 +298,7 @@ class Imbiber
 
 			# Put in nicely formatted fields
 			@entries[key] = {}
-			@entries[key][:type] = entrybranch[:entry][:type]
+			@entries[key][:class] = entrybranch[:entry][:class]
 			entrybranch[:entry][:fields].each do |field|
 				# puts field[:field][0][:name].to_s.downcase
 				case field[:field][0][:name].to_s.downcase
@@ -287,13 +318,13 @@ class Imbiber
 						@entries[key][:editor].push(nametree)
 					end
 				when "title"
-					titletree = TextTransformer.new(:sentence).apply(TextParser.new.parse(field[:field][1][:value].to_s))
+					titletree = TextTransformer.new(@options[:titlecase]).apply(TextParser.new.parse(field[:field][1][:value].to_s))
 					@entries[key][:title] = titletree.to_s
 				when "month"
 					monthtree = MonthTransformer.new.apply(MonthParser.new.parse_with_debug(field[:field][1][:value].to_s))
 					@entries[key][:month] = monthtree.to_s
 				else
-					texttree = TextTransformer.new("unchanged").apply(TextParser.new.parse(field[:field][1][:value].to_s))
+					texttree = TextTransformer.new(:unchanged).apply(TextParser.new.parse(field[:field][1][:value].to_s))
 					@entries[key][field[:field][0][:name].to_s.downcase.to_sym] = texttree.to_s
 				end
 			end
@@ -307,19 +338,160 @@ class Imbiber
 
 		outwhat = ""
 		outwho = ""
-		outwhere = ""
+		outwhere = []
+		outnote = ""
 
-		case @entries[key][:type]
+		case @entries[key][:class]
 		when "article"
 			outwhat = @entries[key][:title]
-			outwho = @entries[key][:author]
+			outwho = list_to_string(@entries[key][:author])
+			outwhere.push("<em>" + @entries[key][:journal] + "</em>")
+			if @entries[key].has_key?(:volume) then
+				outwhere[-1] << ' ' + @entries[key][:volume]
+				if @entries[key].has_key?(:number) then
+					outwhere[-1] << '(' + @entries[key][:number] + ')'
+				end
+			elsif @entries[key].has_key?(:number) then
+				outwhere[-1] << ' ' + @entries[key][:number]
+			end
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:pages) then
+				outwhere.push(@lt.localise(:pp) + ' ' + @entries[key][:pages])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
+
+		when "book"
+
+		when "booklet"
+
+		when "inbook"
+
+		when "incollection"
+			outwhat = @entries[key][:title]
+			outwho = list_to_string(@entries[key][:author])
+			outwhere.push(@lt.localise(:In) + ' ')
+			if @entries[key].has_key?(:editor) then
+				outwhere[-1] << list_to_string(@entries[key][:editor]) + ' (' + @lt.localise(:eds) + ')'
+			end
+			outwhere.push("<em>" + @entries[key][:booktitle] + "</em>")
+			if @entries[key].has_key?(:type) then
+				outwhere.push(@entries[key][:type])
+			end
+			if @entries[key].has_key?(:chapter) then
+				outwhere.push(@lt.localise(:chapter) + ' ' + @entries[key][:chapter])
+			end
+			if @entries[key].has_key?(:series) then
+				outwhere.push(@entries[key][:series])
+				if @entries[key].has_key?(:volume) then
+					outwhere[-1] << ' ' << @entries[key][:volume]
+					if @entries[key].has_key?(:number) then
+						outwhere[-1] << '(' + @entries[key][:number] + ')'
+					end
+				elsif @entries[key].has_key?(:number) then
+					outwhere[-1] << ' ' + @entries[key][:number]
+				end
+			end
+			outwhere.push(@entries[key][:publisher])
+			if @entries[key].has_key?(:edition) then
+				outwhere.push(@entries[key][:edition])
+			end
+			if @entries[key].has_key?(:address) then
+				outwhere.push(@entries[key][:address])
+			end
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:pages) then
+				outwhere.push(@lt.localise(:pp) + ' ' + @entries[key][:pages])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
+
+		when "conference","inproceedings"
+			outwhat = @entries[key][:title]
+			outwho = list_to_string(@entries[key][:author])
+			outwhere.push(@lt.localise(:In) + ' ')
+			if @entries[key].has_key?(:editor) then
+				outwhere[-1] << list_to_string(@entries[key][:editor]) + ' (' + @lt.localise(:eds) + ')'
+			end
+			outwhere.push("<em>" + @entries[key][:booktitle] + "</em>")
+			if @entries[key].has_key?(:chapter) then
+				outwhere.push(@lt.localise(:chapter) + ' ' + @entries[key][:chapter])
+			end
+			if @entries[key].has_key?(:series) then
+				outwhere.push(@entries[key][:series])
+				if @entries[key].has_key?(:volume) then
+					outwhere[-1] << ' ' << @entries[key][:volume]
+					if @entries[key].has_key?(:number) then
+						outwhere[-1] << '(' + @entries[key][:number] + ')'
+					end
+				elsif @entries[key].has_key?(:number) then
+					outwhere[-1] << ' ' + @entries[key][:number]
+				end
+			end
+			if @entries[key].has_key?(:organization) then
+				outwhere.push(@entries[key][:organization])
+			end
+			if @entries[key].has_key?(:publisher) then
+				outwhere.push(@entries[key][:publisher])
+			end
+			if @entries[key].has_key?(:address) then
+				outwhere.push(@entries[key][:address])
+			end
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:pages) then
+				outwhere.push(@lt.localise(:pp) + ' ' + @entries[key][:pages])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
+
+		when "manual"
+
+		when "mastersthesis"
+
+		when "misc"
+
+		when "phdthesis"
+
+		when "proceedings"
+
+		when "techreport"
+
+		when "unpublished"
+
 		end
 
 		if outwhat.length > 0 then
 			outwhat = "<strong>" + outwhat + "</strong>. "
 		end
+		if outwho.length > 0 then
+			outwho << ". "
+		end
+		if outwhere.length > 0 then
+			outwhere = outwhere.join(', ') + '. '
+		else
+			outwhere = ""
+		end
+		if outnote.length > 0 then
+			outnote << ". "
+		end
 		
-		pp outwho
+		out = outwhat + outwho + outwhere + outnote
+		out
 	end
 end
 
@@ -327,7 +499,7 @@ i = Imbiber.new
 i.read("/Users/ken/Versioned/websites/work/publications.bib")
 i.read("/Users/ken/Versioned/websites/work/others.bib")
 # pp i.entries
-i.html_of(:"15ijgis_extrusion")
+pp i.html_of(:"12agile")
 
 # text = File.read("/Users/ken/Versioned/websites/work/publications.bib")
 # entries = DocumentParser.new.parse_with_debug(text)

@@ -1,6 +1,6 @@
 class MonthUtils
 
-	@@numbertoabbreviatedmonth = {
+	@@number_to_abbreviated_month = {
 		"1" => "jan",
 		"2" => "feb",
 		"3" => "mar",
@@ -15,7 +15,7 @@ class MonthUtils
 		"12" => "dec"
 	}
 
-	@@fullmonthtoabbreviatedmonth = {
+	@@full_month_to_abbreviated_month = {
 		"january" => "jan",
 		"february" => "feb",
 		"march" => "mar",
@@ -30,17 +30,17 @@ class MonthUtils
 		"december" => "dec"
 	}
 
-	def numbertoabbreviatedmonth(number)
-		if @@numbertoabbreviatedmonth.has_key?(number) then
-			@@numbertoabbreviatedmonth[number]
+	def number_to_abbreviated_month(number)
+		if @@number_to_abbreviated_month.has_key?(number) then
+			@@number_to_abbreviated_month[number]
 		else
 			number
 		end
 	end
 
-	def fullmonthtoabbreviatedmonth(fullmonth)
-		if @@fullmonthtoabbreviatedmonth.has_key?(fullmonth) then
-			@@fullmonthtoabbreviatedmonth[fullmonth]
+	def full_month_to_abbreviated_month(fullmonth)
+		if @@full_month_to_abbreviated_month.has_key?(fullmonth) then
+			@@full_month_to_abbreviated_month[fullmonth]
 		else
 			fullmonth
 		end
