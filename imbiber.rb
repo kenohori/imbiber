@@ -257,7 +257,13 @@ class Imbiber
 		@options = {
 			:lang => :en,
 			:nameformat => :firstlast,
-			:titlecase => :sentence
+			:titlecase => :sentence,
+			:beforeentry => "<p>",
+			:afterentry => "</p>",
+			:beforegrouptitle => "<h3>",
+			:aftergrouptitle => "</h3>",
+			:beforesubgrouptitle => "<h4>",
+			:aftersubgrouptitle => "</h4>"
 		}
 		options.each do |key, value|
 			@options[key] = value
@@ -267,6 +273,7 @@ class Imbiber
 
 		@lt = LocalisedText.new(@options[:lang])
 		@he = HTMLEntities.new
+		@mu = MonthUtils.new
 	end
 
 	def to_s
@@ -781,7 +788,7 @@ class Imbiber
 			out << ' <a href="' + @entries[key][:presentation] + '"><i class="fa fa-file-image-o"></i> ' + @lt.localise(:Slides) + '</a>'
 		end
 		if @entries[key].has_key?(:doi) then
-			if !@entries[key][:doi].starts_with?("http") || !@entries[key][:doi].starts_with?("//") then
+			if !@entries[key][:doi].start_with?("http://", "https://", "ftp://", "//") then
 				@entries[key][:doi] = "http://dx.doi.org/" + @entries[key][:doi]
 			end
 			out << ' <a href="' + @entries[key][:doi] + '"><i class="fa fa-external-link"></i> DOI</a>'
@@ -792,7 +799,64 @@ class Imbiber
 		out << ' <a href="#bib' + key.to_s + '" data-toggle="collapse"><i class="fa fa-caret-square-o-down"></i> BibTeX</a>'
 		out << '<div id="bib' + key.to_s + '" class="collapse"  tabindex="-1"><pre>' + bibtex_of(@entries[key]) + '</pre></div>'
 		
-		out
+		@options[:beforeentry] + out + @options[:afterentry]
+	end
+
+	def html_of_all(groupby = :year, sortby = :date, order = :desc)
+
+		# Make groups
+		groups = {}
+		@entries.each do |entry|
+			entry[1][:sortingvalue] = ""
+
+			case sortby
+			when :date
+				if entry[1].has_key?(:year) then
+					entry[1][:sortingvalue] << entry[1][:year].to_s
+				else
+					entry[1][:sortingvalue] << "0000"
+				end
+				if entry[1].has_key?(:month) then
+					entry[1][:sortingvalue] << @mu.abbreviated_month_to_sorting_number(entry[1][:month])
+				else
+					entry[1][:sortingvalue] << "00"
+				end
+			end
+			entry[1][:sortingvalue] << entry[1][:key]
+
+			case groupby
+			when :year
+				if entry[1].has_key?(:year) then
+					if !groups.has_key?(entry[1][:year]) then
+						groups[entry[1][:year]] = {:sortingvalue => entry[1][:year], :entries => []}
+					end
+					groups[entry[1][:year]][:entries].push({:sortingvalue => entry[1][:sortingvalue], :entry => html_of(entry[0])})
+				else
+					if !groups.has_key?(@lt.localise(:Unknown)) then
+						groups[@lt.localise(:Unknown)] = {:sortingvalue => "0000", :entries => []}
+					end
+					groups[@lt.localise(:Unknown)][:entries].push({:sortingvalue => entry[1][:sortingvalue], :entry => html_of(entry[0])})
+				end
+			end
+
+			
+		end
+		
+		# Sort groups
+		sorted_groups = groups.sort_by { |k, v| v[:sortingvalue] }
+
+		# Make HTML
+		html = ""
+		sorted_groups.each do |group|
+			# pp group[1][:entries]
+			html << @options[:beforegrouptitle] << group[0] << @options[:aftergrouptitle] << "\n"
+			sorted_group = group[1][:entries].sort_by { |v| v[:sortingvalue] }
+			sorted_group.each do |entry|
+				html << entry[:entry] << "\n"
+			end
+		end
+
+		html
 	end
 end
 
@@ -800,7 +864,7 @@ i = Imbiber.new
 i.read("/Users/ken/Versioned/websites/work/publications.bib")
 i.read("/Users/ken/Versioned/websites/work/others.bib")
 # pp i.entries
-pp i.html_of(:"12agile")
+pp i.html_of_all()
 
 # text = File.read("/Users/ken/Versioned/websites/work/publications.bib")
 # entries = DocumentParser.new.parse_with_debug(text)

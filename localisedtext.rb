@@ -12,7 +12,8 @@ class LocalisedText
 			:Paper => 'Paper',
 			:Poster => 'Poster',
 			:Slides => 'Slides',
-			:www => 'External link'
+			:www => 'External link',
+			:Unknown => 'Unknown'
 		},
 		:es => {
 			:and => 'y',
@@ -26,7 +27,8 @@ class LocalisedText
 			:Paper => 'Artículo',
 			:Poster => 'Póster',
 			:Slides => 'Presentación',
-			:www => 'Enlace externo'
+			:www => 'Enlace externo',
+			:Unknown => 'Desconocido'
 		}
 	}
 
