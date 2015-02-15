@@ -860,11 +860,11 @@ class Imbiber
 	end
 end
 
-i = Imbiber.new
-i.read("/Users/ken/Versioned/websites/work/publications.bib")
-i.read("/Users/ken/Versioned/websites/work/others.bib")
+# i = Imbiber.new
+# i.read("/Users/ken/Versioned/websites/work/publications.bib")
+# i.read("/Users/ken/Versioned/websites/work/others.bib")
 # pp i.entries
-pp i.html_of_all()
+# pp i.html_of_all()
 
 # text = File.read("/Users/ken/Versioned/websites/work/publications.bib")
 # entries = DocumentParser.new.parse_with_debug(text)
