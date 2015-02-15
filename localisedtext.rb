@@ -4,15 +4,29 @@ class LocalisedText
 			:and => 'and',
 			:In => 'In',
 			:eds => 'eds.',
-			:chapter => 'chapter',
-			:pp => 'pp.'
+			:Chapter => 'Chapter',
+			:pp => 'pp.',
+			:mscthesis => 'Master\'s thesis',
+			:phdthesis => 'PhD thesis',
+			:techreport => 'Technical report',
+			:Paper => 'Paper',
+			:Poster => 'Poster',
+			:Slides => 'Slides',
+			:www => 'External link'
 		},
 		:es => {
 			:and => 'y',
 			:In => 'En',
 			:eds => 'eds.',
-			:chapter => 'capítulo',
-			:pp => 'pp.'
+			:Chapter => 'capítulo',
+			:pp => 'pp.',
+			:mscthesis => 'Tesis de maestría',
+			:phdthesis => 'Tesis doctoral',
+			:techreport => 'Reporte técnico',
+			:Paper => 'Artículo',
+			:Poster => 'Póster',
+			:Slides => 'Presentación',
+			:www => 'Enlace externo'
 		}
 	}
 

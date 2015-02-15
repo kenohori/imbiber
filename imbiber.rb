@@ -1,8 +1,10 @@
 #!/usr/bin/ruby
 
+require 'set'
 require 'pp'
 require 'parslet'
 require 'parslet/convenience'
+require 'htmlentities'
 
 require_relative 'specialletters'
 require_relative 'monthutils'
@@ -261,7 +263,10 @@ class Imbiber
 			@options[key] = value
 		end
 
+		@bibfields = ["address", "author", "booktitle", "chapter", "edition", "editor", "howpublished", "institution", "journal", "month", "note", "number", "organization", "pages", "publisher", "school", "series", "title", "type", "year"].to_set
+
 		@lt = LocalisedText.new(@options[:lang])
+		@he = HTMLEntities.new
 	end
 
 	def to_s
@@ -285,6 +290,21 @@ class Imbiber
 		end
 	end
 
+	def bibtex_of(entry)
+		bib = '@' + entry[:class] + '{' + entry[:key] + ',' + "\n"
+		entry.each do |field|
+			if @bibfields.include?(field[0].to_s) then
+				if field[1].kind_of?(Array) then
+					bib << "\t" + field[0].to_s + ' = ' + field[1].join(' and ') + ",\n"
+				else
+					bib << "\t" + field[0].to_s + ' = ' + field[1] + ",\n"
+				end
+			end
+		end
+		bib = bib[0..-3] + "\n" + '}'
+		bib
+	end
+
 	def read(path)
 		text = File.read(path)
 		entriestree = DocumentParser.new.parse(text)
@@ -299,6 +319,7 @@ class Imbiber
 			# Put in nicely formatted fields
 			@entries[key] = {}
 			@entries[key][:class] = entrybranch[:entry][:class]
+			@entries[key][:key] = key.to_s
 			entrybranch[:entry][:fields].each do |field|
 				# puts field[:field][0][:name].to_s.downcase
 				case field[:field][0][:name].to_s.downcase
@@ -367,10 +388,113 @@ class Imbiber
 			end
 
 		when "book"
+			outwhat = @entries[key][:title]
+			if @entries[key].has_key?(:author) then
+				outwho = list_to_string(@entries[key][:author])
+			else
+				outwho = list_to_string(@entries[key][:editor])
+			end
+			if @entries[key].has_key?(:series) then
+				outwhere.push(@entries[key][:series])
+				if @entries[key].has_key?(:volume) then
+					outwhere[-1] << ' ' << @entries[key][:volume]
+					if @entries[key].has_key?(:number) then
+						outwhere[-1] << '(' + @entries[key][:number] + ')'
+					end
+				elsif @entries[key].has_key?(:number) then
+					outwhere[-1] << ' ' + @entries[key][:number]
+				end
+			end
+			if @entries[key].has_key?(:author) && @entries[key].has_key?(:editor) then
+				outwhere.push(list_to_string(@entries[key][:editor]) + ' (' + @lt.localise(:eds) + ')')
+			end
+			outwhere.push(@entries[key][:publisher])
+			if @entries[key].has_key?(:edition) then
+				outwhere.push(@entries[key][:edition])
+			end
+			if @entries[key].has_key?(:address) then
+				outwhere.push(@entries[key][:address])
+			end
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:pages) then
+				outwhere.push(@lt.localise(:pp) + ' ' + @entries[key][:pages])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "booklet"
+			outwhat = @entries[key][:title]
+			if @entries[key].has_key?(:author) then
+				outwho = list_to_string(@entries[key][:author])
+			end
+			if @entries[key].has_key?(:howpublished) then
+				outwhere.push("<em>" + list_to_string(@entries[key][:howpublished]) + "</em>")
+			end
+			if @entries[key].has_key?(:address) then
+				outwhere.push(@entries[key][:address])
+			end
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:pages) then
+				outwhere.push(@lt.localise(:pp) + ' ' + @entries[key][:pages])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "inbook"
+			outwhat = @entries[key][:title]
+			if @entries[key].has_key?(:author) then
+				outwho = list_to_string(@entries[key][:author])
+			else
+				outwho = list_to_string(@entries[key][:editor])
+			end
+			if @entries[key].has_key?(:author) && @entries[key].has_key?(:editor) then
+				outwhere.push(list_to_string(@entries[key][:editor]) + ' (' + @lt.localise(:eds) + ')')
+			end
+			if @entries[key].has_key?(:type) then
+				outwhere.push(@entries[key][:type])
+			end
+			if @entries[key].has_key?(:chapter) then
+				outwhere.push(@lt.localise(:Chapter) + ' ' + @entries[key][:chapter])
+			end
+			if @entries[key].has_key?(:series) then
+				outwhere.push(@entries[key][:series])
+				if @entries[key].has_key?(:volume) then
+					outwhere[-1] << ' ' << @entries[key][:volume]
+					if @entries[key].has_key?(:number) then
+						outwhere[-1] << '(' + @entries[key][:number] + ')'
+					end
+				elsif @entries[key].has_key?(:number) then
+					outwhere[-1] << ' ' + @entries[key][:number]
+				end
+			end
+			outwhere.push(@entries[key][:publisher])
+			if @entries[key].has_key?(:edition) then
+				outwhere.push(@entries[key][:edition])
+			end
+			if @entries[key].has_key?(:address) then
+				outwhere.push(@entries[key][:address])
+			end
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:pages) then
+				outwhere.push(@lt.localise(:pp) + ' ' + @entries[key][:pages])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "incollection"
 			outwhat = @entries[key][:title]
@@ -384,7 +508,7 @@ class Imbiber
 				outwhere.push(@entries[key][:type])
 			end
 			if @entries[key].has_key?(:chapter) then
-				outwhere.push(@lt.localise(:chapter) + ' ' + @entries[key][:chapter])
+				outwhere.push(@lt.localise(:Chapter) + ' ' + @entries[key][:chapter])
 			end
 			if @entries[key].has_key?(:series) then
 				outwhere.push(@entries[key][:series])
@@ -425,7 +549,7 @@ class Imbiber
 			end
 			outwhere.push("<em>" + @entries[key][:booktitle] + "</em>")
 			if @entries[key].has_key?(:chapter) then
-				outwhere.push(@lt.localise(:chapter) + ' ' + @entries[key][:chapter])
+				outwhere.push(@lt.localise(:Chapter) + ' ' + @entries[key][:chapter])
 			end
 			if @entries[key].has_key?(:series) then
 				outwhere.push(@entries[key][:series])
@@ -460,37 +584,214 @@ class Imbiber
 			end
 
 		when "manual"
+			outwhat = @entries[key][:title]
+			if @entries[key].has_key?(:author) then
+				outwho = list_to_string(@entries[key][:author])
+			elsif @entries.has_key?(:organization) then
+				outwho = @entries[key][:organization]
+			end
+			if @entries[key].has_key?(:author) && @entries.has_key?(:organization) then
+				outwhere.push(@entries[key][:organization])
+			end
+			if @entries[key].has_key?(:edition) then
+				outwhere.push(@entries[key][:edition])
+			end
+			if @entries[key].has_key?(:address) then
+				outwhere.push(@entries[key][:address])
+			end
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "mastersthesis"
+			outwhat = @entries[key][:title]
+			outwho = list_to_string(@entries[key][:author])
+			if @entries[key].has_key?(:type) then
+				outwhere.push(@entries[key][:type])
+			else
+				outwhere.push(@lt.localise(:mscthesis))
+			end
+			outwhere.push(@entries[key][:school])
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "misc"
+			if @entries[key].has_key?(:title) then
+				outwhat = @entries[key][:title]
+			end
+			if @entries[key].has_key?(:author) then
+				outwho = list_to_string(@entries[key][:author])
+			end
+			if @entries[key].has_key?(:journal) then
+				outwhere.push("<em>" + @entries[key][:journal] + "</em>")
+			end
+			if @entries[key].has_key?(:volume) then
+				outwhere[-1] << ' ' + @entries[key][:volume]
+				if @entries[key].has_key?(:number) then
+					outwhere[-1] << '(' + @entries[key][:number] + ')'
+				end
+			elsif @entries[key].has_key?(:number) then
+				outwhere[-1] << ' ' + @entries[key][:number]
+			end
+			if @entries[key].has_key?(:howpublished) then
+				outwhere.push(@entries[key][:howpublished])
+			end
+			if @entries[key].has_key?(:month) && @entries[key].has_key?(:year) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			elsif @entries[key].has_key?(:year) then
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:pages) then
+				outwhere.push(@lt.localise(:pp) + ' ' + @entries[key][:pages])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "phdthesis"
+			outwhat = @entries[key][:title]
+			outwho = list_to_string(@entries[key][:author])
+			if @entries[key].has_key?(:type) then
+				outwhere.push(@entries[key][:type])
+			else
+				outwhere.push(@lt.localise(:phdthesis))
+			end
+			outwhere.push(@entries[key][:school])
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "proceedings"
+			outwhat = @entries[key][:title]
+			if @entries[key].has_key?(:editor) then
+				outwho = list_to_string(@entries[key][:editor])
+			end
+			if @entries[key].has_key?(:series) then
+				outwhere.push(@entries[key][:series])
+				if @entries[key].has_key?(:volume) then
+					outwhere[-1] << ' ' << @entries[key][:volume]
+					if @entries[key].has_key?(:number) then
+						outwhere[-1] << '(' + @entries[key][:number] + ')'
+					end
+				elsif @entries[key].has_key?(:number) then
+					outwhere[-1] << ' ' + @entries[key][:number]
+				end
+			end
+			if @entries[key].has_key?(:organization) then
+				outwhere.push(@entries[key][:organization])
+			end
+			if @entries[key].has_key?(:publisher) then
+				outwhere.push(@entries[key][:publisher])
+			end
+			if @entries[key].has_key?(:address) then
+				outwhere.push(@entries[key][:address])
+			end
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "techreport"
+			outwhat = @entries[key][:title]
+			outwho = list_to_string(@entries[key][:author])
+			if @entries[key].has_key?(:type) then
+				outwhere.push(@entries[key][:type])
+			else
+				outwhere.push(@lt.localise(:techreport))
+			end
+			if @entries[key].has_key?(:number) then
+				outwhere[-1] << ' ' + @entries[key][:number]
+			end
+			outwhere.push(@entries[key][:institution])
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+			if @entries[key].has_key?(:note) then
+				outnote = @entries[key][:note]
+			end
 
 		when "unpublished"
+			outwhat = @entries[key][:title]
+			outwho = list_to_string(@entries[key][:author])
+			outwhere.push("<em>" + @entries[key][:note] + "</em>")
+			if @entries[key].has_key?(:month) then
+				outwhere.push(@lt.localisedmonth(@entries[key][:month]) + ' ' + @entries[key][:year])
+			else
+				outwhere.push(@entries[key][:year])
+			end
+
+		else
+			outwho = '<span class="label label-important">Unrecognised entry type: ' + @entries[key][:class] + '</span>'
 
 		end
 
 		if outwhat.length > 0 then
-			outwhat = "<strong>" + outwhat + "</strong>. "
+			outwhat = "<strong>" + @he.encode(outwhat, :named) + "</strong>. "
 		end
 		if outwho.length > 0 then
-			outwho << ". "
+			outwho = @he.encode(outwho, :named) + ". "
 		end
 		if outwhere.length > 0 then
-			outwhere = outwhere.join(', ') + '. '
+			outwhere = @he.encode(outwhere.join(', '), :named) + '. '
+			outwhere = outwhere.gsub('&lt;em&gt;', '<em>').gsub('&lt;/em&gt;', '</em>')
 		else
 			outwhere = ""
 		end
 		if outnote.length > 0 then
 			outnote << ". "
 		end
-		
 		out = outwhat + outwho + outwhere + outnote
+
+		if @entries[key].has_key?(:info) then
+			out << '<span class="text-danger"> ' + @entries[key][:info] + '</span>.'
+		end
+		out << "<br />"
+		if @entries[key].has_key?(:pdf) then
+			out << ' <a href="' + @entries[key][:pdf] + '"><i class="fa fa-file-pdf-o"></i> PDF</a>'
+		end
+		if @entries[key].has_key?(:paper) then
+			out << ' <a href="' + @entries[key][:paper] + '"><i class="fa fa-file-pdf-o"></i> ' + @lt.localise(:Paper) + '</a>'
+		end
+		if @entries[key].has_key?(:poster) then
+			out << ' <a href="' + @entries[key][:poster] + '"><i class="fa fa-file-image-o"></i> ' + @lt.localise(:Poster) + '</a>'
+		end
+		if @entries[key].has_key?(:presentation) then
+			out << ' <a href="' + @entries[key][:presentation] + '"><i class="fa fa-file-image-o"></i> ' + @lt.localise(:Slides) + '</a>'
+		end
+		if @entries[key].has_key?(:doi) then
+			if !@entries[key][:doi].starts_with?("http") || !@entries[key][:doi].starts_with?("//") then
+				@entries[key][:doi] = "http://dx.doi.org/" + @entries[key][:doi]
+			end
+			out << ' <a href="' + @entries[key][:doi] + '"><i class="fa fa-external-link"></i> DOI</a>'
+		end
+		if @entries[key].has_key?(:url) then
+			out << ' <a href="' + @entries[key][:url] + '"><i class="fa fa-external-link"></i> ' + @lt.localise(:www) + '</a>'
+		end
+		out << ' <a href="#bib' + key.to_s + '" data-toggle="collapse"><i class="fa fa-caret-square-o-down"></i> BibTeX</a>'
+		out << '<div id="bib' + key.to_s + '" class="collapse"  tabindex="-1"><pre>' + bibtex_of(@entries[key]) + '</pre></div>'
+		
 		out
 	end
 end
