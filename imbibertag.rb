@@ -64,6 +64,7 @@ class ImbiberTag < Liquid::Tag
 	end
 end
 
-# Liquid::Template.register_tag('imbiber', ImbiberTag)
+Liquid::Template.register_tag('imbiber', ImbiberTag)
+
 # template = Liquid::Template.parse('{% imbiber publications.bib one:14icaa lang:es %}')
 # puts template.render
