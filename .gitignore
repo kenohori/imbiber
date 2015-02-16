@@ -35,3 +35,4 @@ build/
 imbiber.sublime-*
 imbiber.sublime-workspace
 imbiber.sublime-project
+.DS_Store
