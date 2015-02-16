@@ -329,11 +329,7 @@ class Imbiber
 		bib = '@' + entry[:class] + '{' + entry[:key] + ',' + "\n"
 		entry.each do |field|
 			if @bibfields.include?(field[0].to_s) then
-				if field[1].kind_of?(Array) then
-					bib << "\t" + field[0].to_s + ' = ' + field[1].join(' and ') + ",\n"
-				else
-					bib << "\t" + field[0].to_s + ' = ' + field[1] + ",\n"
-				end
+				bib << "\t" + field[0].to_s + ' = {' + entry[:bibtex][field[0].to_s] + "},\n"
 			end
 		end
 		bib = bib[0..-3] + "\n" + '}'
@@ -355,8 +351,10 @@ class Imbiber
 			@entries[key] = {}
 			@entries[key][:class] = entrybranch[:entry][:class]
 			@entries[key][:key] = key.to_s
+			@entries[key][:bibtex] = {}
 			entrybranch[:entry][:fields].each do |field|
 				# puts field[:field][0][:name].to_s.downcase
+				@entries[key][:bibtex][field[:field][0][:name].to_s.downcase] = field[:field][1][:value].to_s
 				case field[:field][0][:name].to_s.downcase
 				when "author"
 					# puts field[:field][1][:value].to_s
