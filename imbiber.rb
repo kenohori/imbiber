@@ -533,8 +533,8 @@ class Imbiber
 		when "incollection"
 			outwhat = @entries[key][:title]
 			outwho = list_to_string(@entries[key][:author])
-			outwhere.push(@lt.localise(:In) + ' ')
 			if @entries[key].has_key?(:editor) then
+				outwhere.push(@lt.localise(:In) + ' ')
 				outwhere[-1] << list_to_string(@entries[key][:editor]) + ' (' + @lt.localise(:eds) + ')'
 			end
 			outwhere.push("<em>" + @entries[key][:booktitle] + "</em>")
@@ -577,8 +577,8 @@ class Imbiber
 		when "conference","inproceedings"
 			outwhat = @entries[key][:title]
 			outwho = list_to_string(@entries[key][:author])
-			outwhere.push(@lt.localise(:In) + ' ')
 			if @entries[key].has_key?(:editor) then
+				outwhere.push(@lt.localise(:In) + ' ')
 				outwhere[-1] << list_to_string(@entries[key][:editor]) + ' (' + @lt.localise(:eds) + ')'
 			end
 			outwhere.push("<em>" + @entries[key][:booktitle] + "</em>")
