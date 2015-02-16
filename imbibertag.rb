@@ -1,7 +1,5 @@
 #!/usr/bin/ruby
 
-# The MIT License (MIT)
-
 # Copyright (c) 2015 Ken Arroyo Ohori
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -66,6 +64,6 @@ class ImbiberTag < Liquid::Tag
 	end
 end
 
-Liquid::Template.register_tag('imbiber', ImbiberTag)
-template = Liquid::Template.parse('{% imbiber publications.bib one:14icaa lang:es %}')
-puts template.render
+# Liquid::Template.register_tag('imbiber', ImbiberTag)
+# template = Liquid::Template.parse('{% imbiber publications.bib one:14icaa lang:es %}')
+# puts template.render
