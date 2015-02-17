@@ -92,11 +92,14 @@ class NameParser < Parslet::Parser
 	rule(:name) { (word | whitespace | str(',').as(:comma)).repeat.as(:name) }
 	rule(:word) { (pseudoletter | bracketedtext).repeat(1).as(:word) | str('.') }
 	rule(:pseudoletter) { specialletter.as(:specialletter) | letter.as(:letter) | badletter.as(:badletter) }
-	rule(:letter) { match['a-zA-Z-'] | bracketedletter }
+	rule(:letter) { match['a-zA-Z\-'] }
 	rule(:bracketedletter) { str("{") >> letter >> str("}") }
 	rule(:badletter) { match['&;'] }
-	rule(:specialletter) { str('---') | str('--') | (str('\\') >> str('&')) | (str('\\') >> modifier >> letter) }
-	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("\`") | str("c") | str("~") }
+	rule(:specialletter) { speciallyencodedletter | escapedletter | letterwithmodifier }
+	rule(:speciallyencodedletter) { str('---') | str('--') | str('``') | str('`') | str('\'\'') | str('\'') }
+	rule(:escapedletter) { str('\\') >> str('&') }
+	rule(:letterwithmodifier) { str('\\') >> modifier >> (bracketedletter | letter) }
+	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("\`") | str("c") | str("v") | str("~") }
 
 end
 
@@ -180,10 +183,13 @@ class TextParser < Parslet::Parser
 	rule(:word) { (pseudoletter | bracketedtext).repeat(1).as(:word) }
 	rule(:pseudoletter) { specialletter.as(:specialletter) | letter.as(:letter) }
 	rule(:pseudoletterpreservecase) { specialletter.as(:specialletterpreservecase) | letter.as(:letterpreservecase) }
-	rule(:letter) { match['^{}\\\\ '] | bracketedletter }
+	rule(:letter) { match['a-zA-Z0-9\-_:;+=/.*,?~&()%#'] }
 	rule(:bracketedletter) { str("{") >> letter >> str("}") }
-	rule(:specialletter) { str('---') | str('--') | (str('\\') >> str('&')) | (str('\\') >> modifier >> letter) }
-	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("\`") | str("c") | str("~") }
+	rule(:specialletter) { speciallyencodedletter | escapedletter | letterwithmodifier }
+	rule(:speciallyencodedletter) { str('---') | str('--') | str('``') | str('`') | str('\'\'') | str('\'') }
+	rule(:escapedletter) { str('\\') >> str('&') }
+	rule(:letterwithmodifier) { str('\\') >> modifier >> (bracketedletter | letter) }
+	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("\`") | str("c") | str("v") | str("~") }
 
 end
 
@@ -386,13 +392,13 @@ class Imbiber
 						@entries[key][:editor].push(nametree)
 					end
 				when "title"
-					titletree = TextTransformer.new(@options[:titlecase]).apply(TextParser.new.parse(field[:field][1][:value].to_s))
+					titletree = TextTransformer.new(@options[:titlecase]).apply(TextParser.new.parse_with_debug(field[:field][1][:value].to_s))
 					@entries[key][:title] = titletree.to_s
 				when "month"
 					monthtree = MonthTransformer.new.apply(MonthParser.new.parse(field[:field][1][:value].to_s))
 					@entries[key][:month] = monthtree.to_s
 				else
-					texttree = TextTransformer.new(:unchanged).apply(TextParser.new.parse(field[:field][1][:value].to_s))
+					texttree = TextTransformer.new(:unchanged).apply(TextParser.new.parse_with_debug(field[:field][1][:value].to_s))
 					@entries[key][field[:field][0][:name].to_s.downcase.to_sym] = texttree.to_s
 				end
 			end
