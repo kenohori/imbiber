@@ -96,7 +96,7 @@ class NameParser < Parslet::Parser
 	rule(:bracketedletter) { str("{") >> letter >> str("}") }
 	rule(:badletter) { match['&;'] }
 	rule(:specialletter) { str('---') | str('--') | (str('\\') >> str('&')) | (str('\\') >> modifier >> letter) }
-	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("c") }
+	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("\`") | str("c") | str("~") }
 
 end
 
@@ -122,7 +122,7 @@ class NameTransformer < Parslet::Transform
 	}
 
 	rule(:badletter => simple(:bl)) {
-		puts "Bad letter: " + bl.to_s
+		puts "Bad letter inside name: " + bl.to_s
 		bl.to_s
 	}
 	
@@ -163,7 +163,7 @@ class NameTransformer < Parslet::Transform
 				last.join(" ") + ", " + first.join(" ")
 			end
 		else
-			puts "Bad name: " + s.join(" ")
+			puts "Bad name (too many commas): " + s.join(" ")
 			s.join(" ")
 		end
 	}
@@ -180,9 +180,10 @@ class TextParser < Parslet::Parser
 	rule(:word) { (pseudoletter | bracketedtext).repeat(1).as(:word) }
 	rule(:pseudoletter) { specialletter.as(:specialletter) | letter.as(:letter) }
 	rule(:pseudoletterpreservecase) { specialletter.as(:specialletterpreservecase) | letter.as(:letterpreservecase) }
-	rule(:letter) { match['^{}\\\\ '] }
+	rule(:letter) { match['^{}\\\\ '] | bracketedletter }
+	rule(:bracketedletter) { str("{") >> letter >> str("}") }
 	rule(:specialletter) { str('---') | str('--') | (str('\\') >> str('&')) | (str('\\') >> modifier >> letter) }
-	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("c") }
+	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("\`") | str("c") | str("~") }
 
 end
 
