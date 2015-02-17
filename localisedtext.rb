@@ -94,6 +94,10 @@ class LocalisedText
 	end
 
 	def localisedmonth(month)
-		@@months[@locale][month]
+		if @@months[@locale].has_key?(month) then
+			@@months[@locale][month]
+		else
+			month
+		end
 	end
 end

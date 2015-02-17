@@ -42,11 +42,13 @@ class SpecialLetters
 		"\\\'i" => "í",
 		"\\\'o" => "ó",
 		"\\\'u" => "ú",
+		"\\\'z" => "ź",
 		"\\\'A" => "Á",
 		"\\\'E" => "É",
 		"\\\'I" => "Í",
 		"\\\'O" => "Ó",
 		"\\\'U" => "Ú",
+		"\\\'Z" => "Ź",
 
 		"\\\^a" => "â",
 		"\\\^e" => "ê",
@@ -57,14 +59,18 @@ class SpecialLetters
 		"\\\^E" => "Ê",
 		"\\\^I" => "Î",
 		"\\\^O" => "Ô",
-		"\\\^U" => "Û"
+		"\\\^U" => "Û",
+
+		"\\cc" => "ç",
+		"\\cC" => "Ç"
 	}
 
 	def convert(letter)
-		if @@letters.has_key?(letter) then
-			@@letters[letter]
-		elsif letter.length == 2 and letter[0] == "\\" then
-			letter[1]
+		processed_letter = letter.tr("\{\}", "")
+		if @@letters.has_key?(processed_letter) then
+			@@letters[processed_letter]
+		elsif processed_letter.length == 2 and processed_letter[0] == "\\" then
+			processed_letter[1]
 		else
 			puts "Warning: not supported letter " + letter
 			letter

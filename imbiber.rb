@@ -91,10 +91,12 @@ class NameParser < Parslet::Parser
 
 	rule(:name) { (word | whitespace | str(',').as(:comma)).repeat.as(:name) }
 	rule(:word) { (pseudoletter | bracketedtext).repeat(1).as(:word) | str('.') }
-	rule(:pseudoletter) { specialletter.as(:specialletter) | letter.as(:letter) }
-	rule(:letter) { match['a-zA-Z'] }
+	rule(:pseudoletter) { specialletter.as(:specialletter) | letter.as(:letter) | badletter.as(:badletter) }
+	rule(:letter) { match['a-zA-Z-'] | bracketedletter }
+	rule(:bracketedletter) { str("{") >> letter >> str("}") }
+	rule(:badletter) { match['&;'] }
 	rule(:specialletter) { str('---') | str('--') | (str('\\') >> str('&')) | (str('\\') >> modifier >> letter) }
-	rule(:modifier) { str("\'") | str("\"") | str("\^") }
+	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("c") }
 
 end
 
@@ -117,6 +119,11 @@ class NameTransformer < Parslet::Transform
 			word << "."
 		end
 		word
+	}
+
+	rule(:badletter => simple(:bl)) {
+		puts "Bad letter: " + bl.to_s
+		bl.to_s
 	}
 	
 	rule(:name => subtree(:s)) {
@@ -155,6 +162,9 @@ class NameTransformer < Parslet::Transform
 			when :lastfirst
 				last.join(" ") + ", " + first.join(" ")
 			end
+		else
+			puts "Bad name: " + s.join(" ")
+			s.join(" ")
 		end
 	}
 end
@@ -172,7 +182,7 @@ class TextParser < Parslet::Parser
 	rule(:pseudoletterpreservecase) { specialletter.as(:specialletterpreservecase) | letter.as(:letterpreservecase) }
 	rule(:letter) { match['^{}\\\\ '] }
 	rule(:specialletter) { str('---') | str('--') | (str('\\') >> str('&')) | (str('\\') >> modifier >> letter) }
-	rule(:modifier) { str("\'") | str("\"") | str("\^") }
+	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("c") }
 
 end
 
@@ -248,7 +258,7 @@ class MonthParser < Parslet::Parser
 
 	root(:number)
 
-	rule(:number) { digit.repeat(1).as(:number) | monthname }
+	rule(:number) { digit.repeat(1).as(:number) | monthname | any.repeat(1).as(:text) }
 	rule(:digit) { match['0-9'] }
 	rule(:monthname) { abbreviatedmonthname.as(:abbreviatedmonthname) | fullmonthname.as(:fullmonthname) }
 	rule(:abbreviatedmonthname) { stri('jan') | stri('feb') | stri('mar') | stri('apr') | stri('may') | stri('jun') | stri('jul') | stri('aug') | stri('sep') | stri('oct') | stri('nov') | stri('dec') }
@@ -271,6 +281,7 @@ class MonthTransformer < Parslet::Transform
 
 	rule(:abbreviatedmonthname => simple(:amn)) { amn.to_s }
 	rule(:number => simple(:n)) { mu.number_to_abbreviated_month(n) }
+	rule(:text => simple(:t)) { t.to_s }
 end
 
 class Imbiber
@@ -342,6 +353,7 @@ class Imbiber
 		entriestree = DocumentParser.new.parse(text)
 		entriestree.each do |entrybranch|
 			key = entrybranch[:entry][:key].to_sym
+			# puts key
 
 			# Repeated key, skip
 			if @entries.has_key?(key) then
@@ -354,7 +366,7 @@ class Imbiber
 			@entries[key][:key] = key.to_s
 			@entries[key][:bibtex] = {}
 			entrybranch[:entry][:fields].each do |field|
-				# puts field[:field][0][:name].to_s.downcase
+				# puts "\t" + field[:field][0][:name].to_s.downcase
 				@entries[key][:bibtex][field[:field][0][:name].to_s.downcase] = field[:field][1][:value].to_s
 				case field[:field][0][:name].to_s.downcase
 				when "author"
@@ -362,7 +374,7 @@ class Imbiber
 					authorstree = AuthorsParser.new.parse(field[:field][1][:value].to_s)
 					@entries[key][:author] = []
 					authorstree.each do |author|
-						nametree = NameTransformer.new(@options[:nameformat]).apply(NameParser.new.parse(author[:author].to_s))
+						nametree = NameTransformer.new(@options[:nameformat]).apply(NameParser.new.parse_with_debug(author[:author].to_s))
 						@entries[key][:author].push(nametree)
 					end
 				when "editor"
@@ -376,7 +388,7 @@ class Imbiber
 					titletree = TextTransformer.new(@options[:titlecase]).apply(TextParser.new.parse(field[:field][1][:value].to_s))
 					@entries[key][:title] = titletree.to_s
 				when "month"
-					monthtree = MonthTransformer.new.apply(MonthParser.new.parse_with_debug(field[:field][1][:value].to_s))
+					monthtree = MonthTransformer.new.apply(MonthParser.new.parse(field[:field][1][:value].to_s))
 					@entries[key][:month] = monthtree.to_s
 				else
 					texttree = TextTransformer.new(:unchanged).apply(TextParser.new.parse(field[:field][1][:value].to_s))
@@ -893,7 +905,9 @@ class Imbiber
 	end
 end
 
-# i = Imbiber.new
+i = Imbiber.new
+i.read("/Users/ken/Versioned/my-website/pubs/all.bib")
+i.html_of_all
 # i.read("/Users/ken/Versioned/websites/work/publications.bib")
 # i.read("/Users/ken/Versioned/websites/work/others.bib")
 # pp i.entries
