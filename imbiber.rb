@@ -848,7 +848,7 @@ class Imbiber
 		@options[:beforeentry] + out + @options[:afterentry]
 	end
 
-	def html_of_all(groupby = :year, sortby = :date, order = :desc)
+	def html_of_all(groupby = :year, sortby = :date, order = :desc, idswithprefix = false)
 
 		# Make groups
 		groups = {}
@@ -898,6 +898,9 @@ class Imbiber
 		html = ""
 		sorted_groups.each do |group|
 			# pp group[1][:entries]
+			if idswithprefix != false then
+				html << "<section id=\"" << idswithprefix << group[0] << "\">\n"
+			end
 			html << @options[:beforegrouptitle] << group[0] << @options[:aftergrouptitle] << "\n"
 			sorted_group = group[1][:entries].sort_by { |v| v[:sortingvalue] }
 			if order == :desc then
@@ -905,6 +908,9 @@ class Imbiber
 			end
 			sorted_group.each do |entry|
 				html << entry[:entry] << "\n"
+			end
+			if @idswithprefix != false then
+				html << "</section>\n"
 			end
 		end
 
