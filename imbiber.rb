@@ -846,13 +846,13 @@ class Imbiber
 			out << ' <a href="' + @entries[key][:paper] + '"><i class="fa fa-file-pdf-o"></i> ' + @lt.localise(:Paper) + '</a>'
 		end
 		if @entries[key].has_key?(:poster) then
-			out << ' <a href="' + @entries[key][:poster] + '"><i class="fa-file-pdf-o"></i> ' + @lt.localise(:Poster) + '</a>'
+			out << ' <a href="' + @entries[key][:poster] + '"><i class="fa fa-file-pdf-o"></i> ' + @lt.localise(:Poster) + '</a>'
 		end
 		if @entries[key].has_key?(:presentation) then
-			out << ' <a href="' + @entries[key][:presentation] + '"><i class="fa-file-pdf-o"></i> ' + @lt.localise(:Slides) + '</a>'
+			out << ' <a href="' + @entries[key][:presentation] + '"><i class="fa fa-file-pdf-o"></i> ' + @lt.localise(:Slides) + '</a>'
 		end
 		if @entries[key].has_key?(:propositions) then
-			out << ' <a href="' + @entries[key][:propositions] + '"><i class="fa-file-pdf-o"></i> ' + @lt.localise(:Propositions) + '</a>'
+			out << ' <a href="' + @entries[key][:propositions] + '"><i class="fa fa-file-pdf-o"></i> ' + @lt.localise(:Propositions) + '</a>'
 		end
 		if @entries[key].has_key?(:doi) then
 			if !@entries[key][:doi].start_with?("http://", "https://", "ftp://", "//") then
