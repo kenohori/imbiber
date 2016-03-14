@@ -24,6 +24,7 @@ class LocalisedText
 	@@words = {
 		:en => {
 			:and => 'and',
+			:Buy => 'Buy',
 			:In => 'In',
 			:eds => 'eds.',
 			:Chapter => 'Chapter',
@@ -40,6 +41,7 @@ class LocalisedText
 		},
 		:es => {
 			:and => 'y',
+			:Buy => 'Comprar',
 			:In => 'En',
 			:eds => 'eds.',
 			:Chapter => 'capítulo',
