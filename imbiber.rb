@@ -1003,9 +1003,14 @@ class Imbiber
 				end
 				html << entry[:entry] << "\n"
 			end
-			html << "</section>\n"
-			if @idswithprefix != false then
+
+			if groupby == :year and @idswithprefix != false then
 				html << "</section>\n"
+			else
+				html << "</section>\n"
+				if @idswithprefix != false then
+					html << "</section>\n"
+				end
 			end
 		end
 
