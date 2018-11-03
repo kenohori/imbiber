@@ -885,7 +885,7 @@ class Imbiber
 		end
 		if @entries[key].has_key?(:doi) then
 			if !@entries[key][:doi].start_with?("http://", "https://", "ftp://", "//") then
-				@entries[key][:doi] = "http://dx.doi.org/" + @entries[key][:doi]
+				@entries[key][:doi] = "https://doi.org/" + @entries[key][:doi]
 			end
 			out << ' <a href="' + @entries[key][:doi] + '"><i class="fa fa-external-link"></i> DOI</a>'
 		end
