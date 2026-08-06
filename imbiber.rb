@@ -1025,6 +1025,27 @@ class Imbiber
 		# sorted_groups
 		html
 	end
+
+	# Generate navigation links to the year groups produced by html_of_all
+	def yearnav(idswithprefix = false, format = :list)
+		years = {}
+		@entries.each do |entry|
+			if entry[1].has_key?(:year) then
+				years[entry[1][:year].to_s] = true
+			end
+		end
+		sorted_years = years.keys.sort.reverse
+		case format
+		when :sidebar
+			sorted_years.map do |year|
+				'<li class="nav-item"><a class="nav-link ms-3 py-0" href="#' << idswithprefix.to_s << year << '">' << year << '</a></li>'
+			end.join("\n")
+		else
+			sorted_years.map do |year|
+				'<a href="#' << idswithprefix.to_s << year << '">' << year << '</a>'
+			end.join(" ")
+		end
+	end
 end
 
 # i = Imbiber.new
