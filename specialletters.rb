@@ -78,8 +78,12 @@ class SpecialLetters
 		"\\\^O" => "Ô",
 		"\\\^U" => "Û",
 
+		"\\~a" => "ã",
 		"\\~n" => "ñ",
+		"\\~o" => "õ",
+		"\\~A" => "Ã",
 		"\\~N" => "Ñ",
+		"\\~O" => "Õ",
 
 		"\\cc" => "ç",
 		"\\cC" => "Ç",
@@ -116,14 +120,18 @@ class SpecialLetters
 
 		"\\.e" => "ė",
 		"\\.E" => "Ė",
+
+		"\\i" => "ı",
 	}
 
 	def convert(letter)
 		processed_letter = letter.tr("\{\}", "")
 		if @@letters.has_key?(processed_letter) then
 			@@letters[processed_letter]
+			# puts processed_letter + " mapped to " + @@letters[processed_letter]
 		elsif processed_letter.length == 2 and processed_letter[0] == "\\" then
 			processed_letter[1]
+			# puts processed_letter + " simplified to " + processed_letter[1]
 		else
 			puts "Warning: not supported letter " + letter
 			letter

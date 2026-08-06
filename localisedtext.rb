@@ -36,7 +36,7 @@ class LocalisedText
 			:Poster => 'Poster',
 			:Propositions => 'Propositions',
 			:Slides => 'Slides',
-			:www => 'External link',
+			:www => 'HTML',
 			:Unknown => 'Unknown'
 		},
 		:es => {
@@ -53,7 +53,7 @@ class LocalisedText
 			:Poster => 'Póster',
 			:Propositions => 'Proposiciones',
 			:Slides => 'Presentación',
-			:www => 'Enlace externo',
+			:www => 'HTML',
 			:Unknown => 'Desconocido'
 		}
 	}
@@ -98,9 +98,9 @@ class LocalisedText
 			'incollection' => 'Conference articles (in book)',
 			'inproceedings' => 'Conference articles',
 			'manual' => 'Manuals',
-			'mastersthesis' => 'Master\'s theses',
+			'mastersthesis' => 'MSc',
 			'misc' => 'Others',
-			'phdthesis' => 'PhD theses',
+			'phdthesis' => 'PhD',
 			'proceedings' => 'Conference proceedings',
 			'techreport' => 'Technical reports',
 			'unpublished' => 'Unpublished'
@@ -113,9 +113,9 @@ class LocalisedText
 			'incollection' => 'Art&iacute;culos de conferencia (en libro)',
 			'inproceedings' => 'Art&iacute;culos de conferencia',
 			'manual' => 'Manuales',
-			'mastersthesis' => 'Tesis de maestr&iacute;a',
+			'mastersthesis' => 'Maestr&iacute;a',
 			'misc' => 'Otros',
-			'phdthesis' => 'Tesis doctorales',
+			'phdthesis' => 'Doctorado',
 			'proceedings' => 'Actas de conferencias',
 			'techreport' => 'Reportes t&eacute;cnico',
 			'unpublished' => 'Sin publicar'

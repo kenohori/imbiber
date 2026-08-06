@@ -97,7 +97,7 @@ class NameParser < Parslet::Parser
 	rule(:bracketedletter) { str("{") >> letter >> str("}") }
 	rule(:badletter) { match['&;'] }
 	rule(:specialletter) { speciallyencodedletter | escapedletter | letterwithmodifier }
-	rule(:speciallyencodedletter) { str('---') | str('--') | str('``') | str('`') | str('\'\'') | str('\'') }
+	rule(:speciallyencodedletter) { str('---') | str('--') | str('``') | str('`') | str('\'\'') | str('\'') | str('\\i') }
 	rule(:escapedletter) { str('\\') >> str('&') }
 	rule(:letterwithmodifier) { str('\\') >> modifier >> (bracketedletter | letter) }
 	rule(:modifier) { str("\'") | str("\"") | str("\^") | str("\`") | str("c") | str("v") | str("~") | str("=") | str(".") }
@@ -836,23 +836,23 @@ class Imbiber
 			outwho = '<span class="label label-important">Unrecognised entry type: ' + @entries[key][:class] + '</span>'
 		end
 
-		if outwhat != nil && outwhat.length > 0 then
-			outwhat = "<strong>" + @he.encode(outwhat, :named) + "</strong>. "
-		else
-			outwhat = ""
-		end
-		if outwho != nil && outwho.length > 0 then
-			outwho = @he.encode(outwho, :named) + ". "
-		else
+		if outwho.nil? then
 			outwho = ""
 		end
-		if outwhere != nil && outwhere.length > 0 then
+
+		if outwhat.length > 0 then
+			outwhat = "<strong>" + @he.encode(outwhat, :named) + "</strong>. "
+		end
+		if outwho.length > 0 then
+			outwho = @he.encode(outwho, :named) + ". "
+		end
+		if outwhere.length > 0 then
 			outwhere = @he.encode(outwhere.join(', '), :named) + '. '
 			outwhere = outwhere.gsub('&lt;em&gt;', '<em>').gsub('&lt;/em&gt;', '</em>')
 		else
 			outwhere = ""
 		end
-		if outnote != nil && outnote.length > 0 then
+		if outnote.length > 0 then
 			outnote << ". "
 		end
 		out = outwhat + outwho + outwhere + outnote
@@ -873,37 +873,39 @@ class Imbiber
 			out << ' <a href="' + @entries[key][:doi] + '"><i class="ai ai-doi-square"></i></a>'
 		end
 		if @entries[key].has_key?(:url) then
-			out << ' <a href="' + @entries[key][:url] + '"><i class="fas fa-external-link-square-alt"></i></a>'
+			out << ' <a href="' + @entries[key][:url] + '"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>'
 		end
 		if @entries[key].has_key?(:pdf) then
-			out << ' <a href="' + @entries[key][:pdf] + '"><i class="fas fa-file-alt"></i></a>'
+			out << ' <a href="' + @entries[key][:pdf] + '"><i class="fa-solid fa-file"></i></a>'
 		end
 		if @entries[key].has_key?(:paper) then
-			out << ' <a href="' + @entries[key][:paper] + '"><i class="fas fa-file-alt"></i></a>'
+			out << ' <a href="' + @entries[key][:paper] + '"><i class="fa-solid fa-file"></i></a>'
 		end
 		if @entries[key].has_key?(:poster) then
-			out << ' <a href="' + @entries[key][:poster] + '"><i class="fas fa-file-image"></i></a>'
+			out << ' <a href="' + @entries[key][:poster] + '"><i class="fa-solid fa-file-circle"></i></a>'
 		end
 		if @entries[key].has_key?(:presentation) then
-			out << ' <a href="' + @entries[key][:presentation] + '"><i class="fas fa-image"></i></a>'
+			out << ' <a href="' + @entries[key][:presentation] + '"><i class="fa-solid fa-image"></i></a>'
 		end
 		if @entries[key].has_key?(:slides) then
-			out << ' <a href="' + @entries[key][:slides] + '"><i class="fas fa-image"></i></a>'
+			out << ' <a href="' + @entries[key][:slides] + '"><i class="fa-solid fa-image"></i></a>'
 		end
 		if @entries[key].has_key?(:propositions) then
-			out << ' <a href="' + @entries[key][:propositions] + '"><i class="fas fa-file-powerpoint"></i></a>'
+			out << ' <a href="' + @entries[key][:propositions] + '"><i class="fa-solid fa-file-powerpoint"></i></a>'
 		end
 		if @entries[key].has_key?(:buy) then
-			out << ' <a href="' + @entries[key][:buy] + '"><i class="fas fa-book"></i></a>'
+			out << ' <a href="' + @entries[key][:buy] + '"><i class="fa-solid fa-book-open"></i></a>'
 		end
-		out << ' <a href="#bib' + key.to_s + '" data-toggle="collapse"><i class="far fa-caret-square-down"></i></a>'
-		out << '<div id="bib' + key.to_s + '" class="collapse" tabindex="-1"><pre class="bibtex">' + bibtex_of(@entries[key]) + '</pre></div>'
+		out << ' <a href="#bib' + key.to_s + '" data-bs-toggle="collapse"><i class="fa-regular fa-square-caret-down"></i></a>'
+		out << '<div id="bib' + key.to_s + '" class="collapse"><pre class="bibtex">' + bibtex_of(@entries[key]) + '</pre></div>'
 		
 		if @entries[key].has_key?(:img) && img == true then
 			if @entries[key].has_key?(:pdf) then
 				out = '<div class="row"><div class="col col-md-3 d-none d-md-block"><a href="' + @entries[key][:pdf] + '"><img src="' + @entries[key][:img] + '" class="img-fluid img-thumbnail" /></a></div><div class="col col-12 col-md-9">' + out + '</div></div>'
 			elsif @entries[key].has_key?(:paper) then
 				out = '<div class="row"><div class="col col-md-3 d-none d-md-block"><a href="' + @entries[key][:paper] + '"><img src="' + @entries[key][:img] + '" class="img-fluid img-thumbnail" /></a></div><div class="col col-12 col-md-9">' + out + '</div></div>'
+			elsif @entries[key].has_key?(:doi) then
+				out = '<div class="row"><div class="col col-md-3 d-none d-md-block"><a href="' + @entries[key][:doi] + '"><img src="' + @entries[key][:img] + '" class="img-fluid img-thumbnail" /></a></div><div class="col col-12 col-md-9">' + out + '</div></div>'
 			elsif @entries[key].has_key?(:poster) then
 				out = '<div class="row"><div class="col col-md-3 d-none d-md-block"><a href="' + @entries[key][:poster] + '"><img src="' + @entries[key][:img] + '" class="img-fluid img-thumbnail" /></a></div><div class="col col-12 col-md-9">' + out + '</div></div>'
 			elsif @entries[key].has_key?(:presentation) then
@@ -986,7 +988,7 @@ class Imbiber
 		sorted_groups.each do |group|
 			# pp group[1][:entries]
 			if idswithprefix != false then
-				html << "<section id=\"" << idswithprefix << group[0] << "\" class=\"filteredtopgroup\">\n"
+				html << "<section id=\"" << idswithprefix << group[0] << "\" class=\"filteredgroup\">\n"
 			end
 			html << @options[:beforegrouptitle]
 			if group[1].has_key?(:nicename) then
