@@ -48,6 +48,8 @@ class ImbiberTag < Liquid::Tag
 			@file = context.registers[:site].config["source"] + "/" + @file
 		end
 
+		@imbiber.baseurl = context.registers[:site].config["baseurl"] || ""
+
 		# Read file
 		@imbiber.read(@file)
 

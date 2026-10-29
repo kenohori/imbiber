@@ -298,8 +298,11 @@ class MonthTransformer < Parslet::Transform
 end
 
 class Imbiber
+	attr_accessor :baseurl
+
 	def initialize(options = Hash.new)
 		@entries = {}
+		@baseurl = ""
 		@options = {
 			:lang => :en,
 			:nameformat => :firstlast,
@@ -864,6 +867,12 @@ class Imbiber
 		if @entries[key].has_key?(:oa) then
 			if (@entries[key][:oa].casecmp("True")) == 0 then
 				out << '<i class="ai ai-open-access-square"></i>'
+			end
+		end
+		# Prepend the site baseurl to fields given as site-relative paths
+		[:url, :pdf, :paper, :poster, :presentation, :slides, :propositions, :buy, :img].each do |field|
+			if @entries[key].has_key?(field) && @entries[key][field].start_with?("/") then
+				@entries[key][field] = @baseurl + @entries[key][field]
 			end
 		end
 		if @entries[key].has_key?(:doi) then
